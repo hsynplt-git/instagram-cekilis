@@ -1,0 +1,77 @@
+body{
+  margin:0;
+  font-family: Arial;
+  background:linear-gradient(135deg,#0b3cff,#00cfff);
+  min-height:100vh;
+}
+
+.app{
+  max-width:500px;
+  margin:40px auto;
+  background:#fff;
+  border-radius:16px;
+  padding:30px;
+  box-shadow:0 20px 50px rgba(0,0,0,.2);
+}
+
+.header{
+  text-align:center;
+}
+
+.header img{
+  width:80px;
+  margin-bottom:10px;
+}
+
+.tabs{
+  display:flex;
+  margin-top:20px;
+}
+
+.tab{
+  flex:1;
+  border:none;
+  padding:15px;
+  background:#eee;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.tab.active{
+  background:#0b3cff;
+  color:white;
+}
+
+.tab-content{
+  display:none;
+  margin-top:20px;
+}
+
+.tab-content.active{
+  display:block;
+}
+
+input{
+  width:100%;
+  padding:15px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  margin-bottom:15px;
+}
+
+button.main{
+  width:100%;
+  padding:15px;
+  border:none;
+  background:#0b3cff;
+  color:white;
+  border-radius:10px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.story{
+  width:100%;
+  margin-top:20px;
+  border-radius:10px;
+}
