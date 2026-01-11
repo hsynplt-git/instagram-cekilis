@@ -1,45 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Instagram Çekiliş</title>
+<title>Çekiliş Motoru</title>
 <style>
-body{font-family:Arial;background:#111;color:white;text-align:center;padding:30px}
-button{padding:15px 30px;font-size:18px;background:#e1306c;color:white;border:none;border-radius:10px}
-img{border-radius:50%}
+body {
+    font-family: Arial;
+    background:#f7f7f7;
+    text-align:center;
+}
+.box {
+    background:white;
+    width:360px;
+    margin:40px auto;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 0 20px rgba(0,0,0,.1);
+}
+input {
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+}
+button {
+    padding:12px;
+    width:100%;
+    background:#ff2f4a;
+    color:white;
+    border:none;
+    border-radius:6px;
+    font-size:16px;
+}
+.logo {
+    width:180px;
+    margin-bottom:20px;
+}
 </style>
 </head>
-<body>
 
- <div style="text-align:center; margin-bottom:20px;">
-    <img src="/static/logo.png" style="max-width:200px; width:60%;"/>
+<body>
+<div class="box">
+    <img src="/static/logo.png" class="logo">
+    <h3>Instagram Çekiliş Sistemi</h3>
+
+    <input id="url" placeholder="Instagram post linki">
+    <button onclick="run()">Çekilişi Başlat</button>
+
+    <pre id="result" style="text-align:left;margin-top:15px"></pre>
 </div>
 
-<h1>Instagram Çekiliş Sistemi 🎉</h1>
-
-<input id="url" style="width:80%;padding:10px" value="https://www.instagram.com/reel/DTFGE4lCLUM/"><br><br>
-<button onclick="draw()">Çekilişi Başlat</button>
-
-<div id="status"></div>
-<div id="winners"></div>
-
 <script>
-async function draw(){
- document.getElementById("status").innerText="Yorumlar çekiliyor...";
- const r=await fetch("/draw",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:document.getElementById("url").value})});
- const d=await r.json();
-
- document.getElementById("status").innerHTML="Çekiliş ID: <b>"+d.draw_id+"</b><br>Toplam: "+d.total_comments;
-
- let h="<h2>Asıl Kazananlar</h2>";
- d.main_winners.forEach(w=>h+=`<img src="${w.photo}" width="80"><br>@${w.username}<br>`);
-
- h+="<h2>Yedekler</h2>";
- d.backup_winners.forEach(w=>h+=`<img src="${w.photo}" width="80"><br>@${w.username}<br>`);
-
- h+=`<br><a href="${d.story}" target="_blank" style="color:#00ffcc">📲 Story Görselini Aç</a>`;
- document.getElementById("winners").innerHTML=h;
+function run(){
+  fetch("/draw", {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:"post_url="+encodeURIComponent(document.getElementById("url").value)
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById("result").innerText = JSON.stringify(d,null,2)
+  })
 }
 </script>
-
 </body>
 </html>
