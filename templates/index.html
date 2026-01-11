@@ -18,7 +18,32 @@ button { padding:15px 30px; font-size:18px; background:#e1306c; color:white; bor
 <button onclick="draw()">Çekilişi Başlat</button>
 
 <div id="status"></div>
-<div id="winners"></div>
+async function draw(){
+  document.getElementById("status").innerText="Yorumlar çekiliyor... (17k olabilir, bekleyin)";
+
+  const res = await fetch("/draw",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json"},
+    body: JSON.stringify({url:document.getElementById("url").value})
+  });
+
+  const data = await res.json();
+
+  document.getElementById("status").innerText =
+    "Toplam yorum: "+data.total_comments+" | Geçerli katılımcı: "+data.valid_users;
+
+  let html = "<h2>🏆 Asıl Kazananlar</h2>";
+  data.main_winners.forEach(w=>{
+    html += `<div><img src="${w.photo}" width="80" style="border-radius:50%"><br>@${w.username}</div><br>`;
+  });
+
+  html += "<h2>🎯 Yedekler</h2>";
+  data.backup_winners.forEach(w=>{
+    html += `<div><img src="${w.photo}" width="80" style="border-radius:50%"><br>@${w.username}</div><br>`;
+  });
+
+  document.getElementById("winners").innerHTML = html;
+}
 
 <script>
 async function draw(){
