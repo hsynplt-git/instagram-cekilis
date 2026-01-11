@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Çekiliş Sorgula</title>
+<style>
+body {
+    font-family: Arial;
+    background:#f7f7f7;
+    text-align:center;
+}
+.box {
+    background:white;
+    width:360px;
+    margin:40px auto;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 0 20px rgba(0,0,0,.1);
+}
+input {
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+}
+button {
+    padding:12px;
+    width:100%;
+    background:#222;
+    color:white;
+    border:none;
+    border-radius:6px;
+}
+.logo {
+    width:160px;
+    margin-bottom:20px;
+}
+</style>
+</head>
+
+<body>
+<div class="box">
+    <img src="/static/logo.png" class="logo">
+    <h3>Çekiliş Sonucu Sorgula</h3>
+
+    <input id="cid" placeholder="Çekiliş ID">
+    <button onclick="get()">Sorgula</button>
+
+    <pre id="out" style="text-align:left;margin-top:15px"></pre>
+</div>
+
+<script>
+function get(){
+ fetch("/results/"+document.getElementById("cid").value)
+ .then(r=>r.json())
+ .then(d=>{
+   document.getElementById("out").innerText = JSON.stringify(d,null,2)
+ })
+}
+</script>
+</body>
+</html>
