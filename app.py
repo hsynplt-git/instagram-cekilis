@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
-import requests
-import random
-import time
+import requests, random, time, sqlite3, io
+from datetime import datetime
+from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 
@@ -12,88 +12,137 @@ HEADERS = {
     "Cookie": f"sessionid={SESSION_ID};"
 }
 
-REQUIRED_ACCOUNTS = [
-    "lezzetkayseride",
-    "gazezoglutupvekomur",
-    "muhammedgeziyor"
-]
+REQUIRED_ACCOUNTS = ["lezzetkayseride","gazezoglutupvekomur","muhammedgeziyor"]
 
+# ---------------- DB ----------------
+def db():
+    return sqlite3.connect("draws.db", check_same_thread=False)
+
+conn = db()
+c = conn.cursor()
+c.execute("""
+CREATE TABLE IF NOT EXISTS draws(
+id TEXT, reel TEXT, date TEXT,
+total INTEGER, valid INTEGER,
+main1 TEXT, main2 TEXT,
+backup1 TEXT, backup2 TEXT,
+story TEXT)
+""")
+conn.commit()
+
+# ---------------- Instagram ----------------
 def get_post_id(shortcode):
     url = f"https://www.instagram.com/p/{shortcode}/?__a=1&__d=dis"
-    r = requests.get(url, headers=HEADERS)
-    return r.json()["items"][0]["id"]
+    return requests.get(url, headers=HEADERS).json()["items"][0]["id"]
 
 def get_all_comments(shortcode):
     post_id = get_post_id(shortcode)
-    comments = {}
+    users = {}
     max_id = None
 
     while True:
         url = f"https://i.instagram.com/api/v1/media/{post_id}/comments/"
         params = {"max_id": max_id} if max_id else {}
-        r = requests.get(url, headers=HEADERS, params=params)
-        data = r.json()
+        r = requests.get(url, headers=HEADERS, params=params).json()
 
-        for c in data["comments"]:
-            user = c["user"]["username"]
-            comments[user] = True
+        for c in r["comments"]:
+            users[c["user"]["username"]] = True
 
-        if data.get("next_max_id"):
-            max_id = data["next_max_id"]
+        if r.get("next_max_id"):
+            max_id = r["next_max_id"]
             time.sleep(1.2)
         else:
             break
 
-    return list(comments.keys())
+    return list(users.keys())
 
+def get_profile(username):
+    url = f"https://www.instagram.com/{username}/?__a=1&__d=dis"
+    return requests.get(url, headers=HEADERS).json()["graphql"]["user"]["profile_pic_url_hd"]
+
+# ⚠️ Instagram bu endpointi kısıtladığı için takip kontrolü şimdilik devre dışı
 def is_following(user, target):
-    url = f"https://i.instagram.com/api/v1/friendships/{user}/following/"
-    r = requests.get(url, headers=HEADERS)
-    data = r.json()
-    return target in [u["username"] for u in data.get("users", [])]
+    return True
 
+# ---------------- Story ----------------
+def create_story(main, backup):
+    img = Image.new("RGB", (1080,1920), "#111")
+    draw = ImageDraw.Draw(img)
+    draw.text((540,60),"🎉 ÇEKİLİŞ KAZANANLARI",fill="white",anchor="mm")
+
+    y = 200
+
+    def block(u,y):
+        p = requests.get(u["photo"]).content
+        av = Image.open(io.BytesIO(p)).resize((200,200))
+        img.paste(av,(440,y))
+        draw.text((540,y+220),"@"+u["username"],fill="white",anchor="mm")
+        return y+320
+
+    draw.text((540,y-40),"Asıl Kazananlar",fill="#00ffcc",anchor="mm")
+    for u in main: y = block(u,y)
+
+    y+=40
+    draw.text((540,y),"Yedekler",fill="#ffaa00",anchor="mm")
+    y+=60
+    for u in backup: y = block(u,y)
+
+    img.save("static/story.png")
+
+# ---------------- Routes ----------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
-def get_profile_pic(username):
-    url = f"https://www.instagram.com/{username}/?__a=1&__d=dis"
-    r = requests.get(url, headers=HEADERS)
-    return r.json()["graphql"]["user"]["profile_pic_url_hd"]
-
-    @app.route("/draw", methods=["POST"])
+@app.route("/draw", methods=["POST"])
 def draw():
-    reel_url = request.json["url"]
-    shortcode = reel_url.split("/reel/")[1].split("/")[0]
+    reel = request.json["url"]
+    shortcode = reel.split("/reel/")[1].split("/")[0]
 
     commenters = get_all_comments(shortcode)
+    valid = commenters  # takip filtresi kapalı
 
-    valid_users = []
+    selected = random.sample(valid, 4)
+    winners = [{"username":u,"photo":get_profile(u)} for u in selected]
 
-    for user in commenters:
-        ok = True
-        for acc in REQUIRED_ACCOUNTS:
-            if not is_following(user, acc):
-                ok = False
-                break
-        if ok:
-            valid_users.append(user)
+    create_story(winners[:2], winners[2:])
 
-    selected = random.sample(valid_users, 4)
+    draw_id = "DL-" + datetime.now().strftime("%Y%m%d%H%M%S")
 
-    winners = []
-    for u in selected:
-        winners.append({
-            "username": u,
-            "photo": get_profile_pic(u)
-        })
+    conn = db()
+    c = conn.cursor()
+    c.execute("INSERT INTO draws VALUES (?,?,?,?,?,?,?,?,?,?)",(
+        draw_id, shortcode, datetime.now().strftime("%d.%m.%Y %H:%M"),
+        len(commenters), len(valid),
+        winners[0]["username"], winners[1]["username"],
+        winners[2]["username"], winners[3]["username"],
+        "/static/story.png"
+    ))
+    conn.commit()
 
     return jsonify({
+        "draw_id": draw_id,
         "total_comments": len(commenters),
-        "valid_users": len(valid_users),
+        "valid_users": len(valid),
         "main_winners": winners[:2],
-        "backup_winners": winners[2:]
+        "backup_winners": winners[2:],
+        "story": "/static/story.png"
     })
 
-if __name__ == "__main__":
-    app.run()
+@app.route("/draw/<draw_id>")
+def get_draw(draw_id):
+    c = db().cursor()
+    c.execute("SELECT * FROM draws WHERE id=?", (draw_id,))
+    d = c.fetchone()
+    if not d: return "Bulunamadı"
+
+    return jsonify({
+        "id": d[0],
+        "reel": d[1],
+        "date": d[2],
+        "total": d[3],
+        "valid": d[4],
+        "main": [d[5], d[6]],
+        "backup": [d[7], d[8]],
+        "story": d[9]
+    })
