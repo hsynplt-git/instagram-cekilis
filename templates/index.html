@@ -1,63 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Çekiliş Motoru</title>
+<meta charset="UTF-8">
+<title>Instagram Çekiliş Motoru</title>
 <style>
-body {
-    font-family: Arial;
-    background:#f7f7f7;
-    text-align:center;
-}
-.box {
-    background:white;
-    width:360px;
-    margin:40px auto;
-    padding:30px;
-    border-radius:10px;
-    box-shadow:0 0 20px rgba(0,0,0,.1);
-}
-input {
-    width:100%;
-    padding:12px;
-    margin:10px 0;
-}
-button {
-    padding:12px;
-    width:100%;
-    background:#ff2f4a;
-    color:white;
-    border:none;
-    border-radius:6px;
-    font-size:16px;
-}
-.logo {
-    width:180px;
-    margin-bottom:20px;
-}
+body{font-family:Arial;background:#f4f6fa;padding:20px}
+.tab{display:inline-block;padding:10px 20px;cursor:pointer;background:#ddd;margin-right:10px}
+.tab.active{background:#fff;font-weight:bold}
+.box{background:#fff;padding:20px;border-radius:10px;display:none}
+.box.active{display:block}
+.user{display:flex;align-items:center;margin:10px 0}
+.user img{width:50px;height:50px;border-radius:50%;margin-right:10px}
 </style>
 </head>
 
 <body>
-<div class="box">
-    <img src="/static/logo.png" class="logo">
-    <h3>Instagram Çekiliş Sistemi</h3>
 
-    <input id="url" placeholder="Instagram post linki">
-    <button onclick="run()">Çekilişi Başlat</button>
+<img src="/static/logo.png" width="180">
 
-    <pre id="result" style="text-align:left;margin-top:15px"></pre>
+<div>
+  <div class="tab active" onclick="show(1)">🎁 Çekiliş Başlat</div>
+  <div class="tab" onclick="show(2)">🔍 Çekiliş Sorgula</div>
+</div>
+
+<div id="tab1" class="box active">
+<input id="url" placeholder="Instagram Post URL" style="width:60%">
+<button onclick="start()">Çekilişi Başlat</button>
+<div id="result"></div>
+</div>
+
+<div id="tab2" class="box">
+<input id="did" placeholder="Çekiliş ID">
+<button onclick="search()">Sorgula</button>
+<div id="query"></div>
 </div>
 
 <script>
-function run(){
-  fetch("/draw", {
-    method:"POST",
-    headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body:"post_url="+encodeURIComponent(document.getElementById("url").value)
-  }).then(r=>r.json()).then(d=>{
-    document.getElementById("result").innerText = JSON.stringify(d,null,2)
-  })
+function show(i){
+ document.querySelectorAll(".box").forEach(x=>x.classList.remove("active"))
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"))
+ document.getElementById("tab"+i).classList.add("active")
+ document.querySelectorAll(".tab")[i-1].classList.add("active")
+}
+
+function start(){
+ fetch("/draw",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({url:document.getElementById("url").value})
+ }).then(r=>r.json()).then(d=>{
+   let html=`<h3>Çekiliş ID: ${d.id}</h3><h4>Kazananlar</h4>`
+   d.winners.forEach(u=>{
+     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
+   })
+   html+="<h4>Yedekler</h4>"
+   d.backups.forEach(u=>{
+     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
+   })
+   document.getElementById("result").innerHTML=html
+ })
+}
+
+function search(){
+ fetch("/result/"+document.getElementById("did").value)
+ .then(r=>r.json()).then(d=>{
+   let html="<h3>Kazananlar</h3>"
+   d.winners.forEach(u=>{
+     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
+   })
+   document.getElementById("query").innerHTML=html
+ })
 }
 </script>
+
 </body>
 </html>
