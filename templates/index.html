@@ -1,75 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Instagram Çekiliş Motoru</title>
-<style>
-body{font-family:Arial;background:#f4f6fa;padding:20px}
-.tab{display:inline-block;padding:10px 20px;cursor:pointer;background:#ddd;margin-right:10px}
-.tab.active{background:#fff;font-weight:bold}
-.box{background:#fff;padding:20px;border-radius:10px;display:none}
-.box.active{display:block}
-.user{display:flex;align-items:center;margin:10px 0}
-.user img{width:50px;height:50px;border-radius:50%;margin-right:10px}
-</style>
+<title>Çekiliş Motoru</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
+<div class="app">
 
-<img src="/static/logo.png" width="180">
+  <div class="header">
+    <img src="/static/logo.png">
+    <h1>Instagram Çekiliş Motoru</h1>
+    <p>Şeffaf • Güvenilir • Gerçek Verilerle</p>
+  </div>
 
-<div>
-  <div class="tab active" onclick="show(1)">🎁 Çekiliş Başlat</div>
-  <div class="tab" onclick="show(2)">🔍 Çekiliş Sorgula</div>
-</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('draw')">🎯 Çekiliş Başlat</button>
+    <button class="tab" onclick="showTab('search')">🔍 Sonuç Sorgula</button>
+  </div>
 
-<div id="tab1" class="box active">
-<input id="url" placeholder="Instagram Post URL" style="width:60%">
-<button onclick="start()">Çekilişi Başlat</button>
-<div id="result"></div>
-</div>
+  <div id="draw" class="tab-content active">
+    <input id="url" placeholder="Instagram post / reel linki">
+    <button class="main" onclick="startDraw()">Çekilişi Başlat</button>
 
-<div id="tab2" class="box">
-<input id="did" placeholder="Çekiliş ID">
-<button onclick="search()">Sorgula</button>
-<div id="query"></div>
+    <div id="drawResult"></div>
+  </div>
+
+  <div id="search" class="tab-content">
+    <input id="drawid" placeholder="Çekiliş ID">
+    <button class="main" onclick="searchDraw()">Sorgula</button>
+
+    <div id="searchResult"></div>
+  </div>
+
 </div>
 
 <script>
-function show(i){
- document.querySelectorAll(".box").forEach(x=>x.classList.remove("active"))
- document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"))
- document.getElementById("tab"+i).classList.add("active")
- document.querySelectorAll(".tab")[i-1].classList.add("active")
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove("active"))
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove("active"))
+  event.target.classList.add("active")
+  document.getElementById(id).classList.add("active")
 }
 
-function start(){
- fetch("/draw",{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({url:document.getElementById("url").value})
- }).then(r=>r.json()).then(d=>{
-   let html=`<h3>Çekiliş ID: ${d.id}</h3><h4>Kazananlar</h4>`
-   d.winners.forEach(u=>{
-     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
-   })
-   html+="<h4>Yedekler</h4>"
-   d.backups.forEach(u=>{
-     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
-   })
-   document.getElementById("result").innerHTML=html
- })
+function startDraw(){
+  fetch("/draw",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({url:document.getElementById("url").value})
+  }).then(r=>r.json()).then(d=>{
+    document.getElementById("drawResult").innerHTML = `
+      <h3>Çekiliş ID: ${d.draw_id}</h3>
+      <img src="${d.story}" class="story">
+    `
+  })
 }
 
-function search(){
- fetch("/result/"+document.getElementById("did").value)
- .then(r=>r.json()).then(d=>{
-   let html="<h3>Kazananlar</h3>"
-   d.winners.forEach(u=>{
-     html+=`<div class="user"><img src="${u.avatar}">@${u.username}</div>`
-   })
-   document.getElementById("query").innerHTML=html
- })
+function searchDraw(){
+  fetch("/result/"+document.getElementById("drawid").value)
+  .then(r=>r.json()).then(d=>{
+    document.getElementById("searchResult").innerHTML = `
+      <h3>Kazananlar</h3>
+      <p>${d.main.join(" , ")}</p>
+      <h4>Yedekler</h4>
+      <p>${d.backup.join(" , ")}</p>
+      <img src="${d.story}" class="story">
+    `
+  })
 }
 </script>
 
