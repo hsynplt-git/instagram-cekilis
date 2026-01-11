@@ -3,63 +3,37 @@
 <head>
 <title>Instagram Çekiliş</title>
 <style>
-body { font-family: Arial; background:#111; color:white; text-align:center; padding:40px; }
-button { padding:15px 30px; font-size:18px; background:#e1306c; color:white; border:none; border-radius:10px; }
-#winners { font-size:24px; margin-top:30px; }
+body{font-family:Arial;background:#111;color:white;text-align:center;padding:30px}
+button{padding:15px 30px;font-size:18px;background:#e1306c;color:white;border:none;border-radius:10px}
+img{border-radius:50%}
 </style>
 </head>
 <body>
 
 <h1>Instagram Çekiliş Sistemi 🎉</h1>
 
-<input id="url" style="width:80%;padding:10px" value="https://www.instagram.com/reel/DTFGE4lCLUM/">
-
-<br><br>
+<input id="url" style="width:80%;padding:10px" value="https://www.instagram.com/reel/DTFGE4lCLUM/"><br><br>
 <button onclick="draw()">Çekilişi Başlat</button>
 
 <div id="status"></div>
-async function draw(){
-  document.getElementById("status").innerText="Yorumlar çekiliyor... (17k olabilir, bekleyin)";
-
-  const res = await fetch("/draw",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify({url:document.getElementById("url").value})
-  });
-
-  const data = await res.json();
-
-  document.getElementById("status").innerText =
-    "Toplam yorum: "+data.total_comments+" | Geçerli katılımcı: "+data.valid_users;
-
-  let html = "<h2>🏆 Asıl Kazananlar</h2>";
-  data.main_winners.forEach(w=>{
-    html += `<div><img src="${w.photo}" width="80" style="border-radius:50%"><br>@${w.username}</div><br>`;
-  });
-
-  html += "<h2>🎯 Yedekler</h2>";
-  data.backup_winners.forEach(w=>{
-    html += `<div><img src="${w.photo}" width="80" style="border-radius:50%"><br>@${w.username}</div><br>`;
-  });
-
-  document.getElementById("winners").innerHTML = html;
-}
+<div id="winners"></div>
 
 <script>
 async function draw(){
-  document.getElementById("status").innerText="Yorumlar çekiliyor... (17k olabilir, bekleyin)";
-  const res = await fetch("/draw",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify({url:document.getElementById("url").value})
-  });
-  const data = await res.json();
+ document.getElementById("status").innerText="Yorumlar çekiliyor...";
+ const r=await fetch("/draw",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:document.getElementById("url").value})});
+ const d=await r.json();
 
-  document.getElementById("status").innerText =
-    "Toplam yorum: "+data.total_comments+" | Geçerli katılımcı: "+data.valid_users;
+ document.getElementById("status").innerHTML="Çekiliş ID: <b>"+d.draw_id+"</b><br>Toplam: "+d.total_comments;
 
-  document.getElementById("winners").innerHTML =
-    "🏆 Kazananlar:<br>@"+data.winners[0]+"<br>@"+data.winners[1];
+ let h="<h2>Asıl Kazananlar</h2>";
+ d.main_winners.forEach(w=>h+=`<img src="${w.photo}" width="80"><br>@${w.username}<br>`);
+
+ h+="<h2>Yedekler</h2>";
+ d.backup_winners.forEach(w=>h+=`<img src="${w.photo}" width="80"><br>@${w.username}<br>`);
+
+ h+=`<br><a href="${d.story}" target="_blank" style="color:#00ffcc">📲 Story Görselini Aç</a>`;
+ document.getElementById("winners").innerHTML=h;
 }
 </script>
 
