@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Instagram Çekiliş</title>
+<style>
+body{font-family:Arial;background:#f5f5f5}
+.box{width:360px;margin:40px auto;background:white;padding:20px;border-radius:10px}
+input,button{width:100%;padding:10px;margin-top:10px}
+button{background:#e1306c;color:white;border:none}
+</style>
+</head>
+<body>
+<div class="box">
+<h3>Instagram Çekiliş</h3>
+<input id="s" placeholder="SessionID">
+<input id="p" value="https://www.instagram.com/reel/DTFGE4lCLUM/">
+<button onclick="run()">Çekilişi Başlat</button>
+<pre id="o"></pre>
+</div>
+<script>
+function run(){
+fetch("/run",{
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({session:s.value, post:p.value})
+}).then(r=>r.json()).then(d=>{
+ if(d.error){ o.innerText=d.error; return;}
+ o.innerText =
+ "Asıl 1: "+d.asil1+"\n"+
+ "Asıl 2: "+d.asil2+"\n"+
+ "Yedek 1: "+d.yedek1+"\n"+
+ "Yedek 2: "+d.yedek2+"\n\n"+
+ "Sonuç görseli: "+location.origin+d.image;
+})
+}
+</script>
+</body>
+</html>
