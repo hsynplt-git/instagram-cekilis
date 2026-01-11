@@ -1,82 +1,86 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template
+import requests
 import random
+import time
 
 app = Flask(__name__)
 
-HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-<title>Instagram Çekiliş Aracı</title>
-<style>
-body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
-.container { background:#020617; padding:30px; max-width:600px; margin:50px auto; border-radius:12px; }
-input, button { width:100%; padding:12px; margin:10px 0; border-radius:8px; border:none; }
-button { background:#6366f1; color:white; font-size:16px; cursor:pointer; }
-button:hover { background:#4f46e5; }
-.result { margin-top:20px; font-size:20px; color:#22c55e; }
-</style>
-</head>
-<body>
-<div class="container">
-<h1>🎉 Instagram Çekiliş Aracı</h1>
-<input id="post" placeholder="Instagram Post Linki">
-<button onclick="getComments()">Yorumları Çek</button>
-<button onclick="drawWinner()">Kazananı Seç</button>
-<div id="info"></div>
-<div class="result" id="winner"></div>
-</div>
+SESSION_ID = "6683989654%3AKEpYtx3t62ZYMI%3A1%3AAYhiDD_mY9W7xQgE5UCA9aPNP4LKwRdZgvmHJD_zjg"
 
-<script>
-let comments = [];
-
-function getComments(){
-  fetch("/fetch-comments", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({link: document.getElementById("post").value})
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    comments = d.comments;
-    document.getElementById("info").innerHTML = "Toplam Yorum: " + comments.length;
-  });
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Cookie": f"sessionid={SESSION_ID};"
 }
 
-function drawWinner(){
-  fetch("/draw-winner", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({comments: comments})
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    document.getElementById("winner").innerHTML = "🏆 Kazanan: " + d.winner;
-  });
-}
-</script>
-</body>
-</html>
-"""
+REQUIRED_ACCOUNTS = [
+    "lezzetkayseride",
+    "gazezoglutupvekomur",
+    "muhammedgeziyor"
+]
+
+def get_post_id(shortcode):
+    url = f"https://www.instagram.com/p/{shortcode}/?__a=1&__d=dis"
+    r = requests.get(url, headers=HEADERS)
+    return r.json()["items"][0]["id"]
+
+def get_all_comments(shortcode):
+    post_id = get_post_id(shortcode)
+    comments = {}
+    max_id = None
+
+    while True:
+        url = f"https://i.instagram.com/api/v1/media/{post_id}/comments/"
+        params = {"max_id": max_id} if max_id else {}
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json()
+
+        for c in data["comments"]:
+            user = c["user"]["username"]
+            comments[user] = True
+
+        if data.get("next_max_id"):
+            max_id = data["next_max_id"]
+            time.sleep(1.2)
+        else:
+            break
+
+    return list(comments.keys())
+
+def is_following(user, target):
+    url = f"https://i.instagram.com/api/v1/friendships/{user}/following/"
+    r = requests.get(url, headers=HEADERS)
+    data = r.json()
+    return target in [u["username"] for u in data.get("users", [])]
 
 @app.route("/")
 def home():
-    return render_template_string(HTML)
+    return render_template("index.html")
 
-@app.route("/fetch-comments", methods=["POST"])
-def fetch_comments():
-    # DEMO: Gerçek Instagram yerine sahte yorumlar
-    fake_comments = [
-        "ahmet", "mehmet", "ayse", "fatma", "can",
-        "elif", "murat", "zeynep", "burak", "seda"
-    ]
-    return jsonify({"comments": fake_comments})
-
-@app.route("/draw-winner", methods=["POST"])
+@app.route("/draw", methods=["POST"])
 def draw():
-    data = request.json
-    winner = random.choice(data["comments"])
-    return jsonify({"winner": winner})
+    reel_url = request.json["url"]
+    shortcode = reel_url.split("/reel/")[1].split("/")[0]
+
+    commenters = get_all_comments(shortcode)
+
+    valid_users = []
+
+    for user in commenters:
+        ok = True
+        for acc in REQUIRED_ACCOUNTS:
+            if not is_following(user, acc):
+                ok = False
+                break
+        if ok:
+            valid_users.append(user)
+
+    winners = random.sample(valid_users, 2)
+
+    return jsonify({
+        "total_comments": len(commenters),
+        "valid_users": len(valid_users),
+        "winners": winners
+    })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run()
