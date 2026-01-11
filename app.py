@@ -146,3 +146,7 @@ def get_draw(draw_id):
         "backup": [d[7], d[8]],
         "story": d[9]
     })
+
+from flask import Flask
+
+app = Flask(__name__, static_folder="static")
