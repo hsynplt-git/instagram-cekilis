@@ -56,7 +56,12 @@ def is_following(user, target):
 def home():
     return render_template("index.html")
 
-@app.route("/draw", methods=["POST"])
+def get_profile_pic(username):
+    url = f"https://www.instagram.com/{username}/?__a=1&__d=dis"
+    r = requests.get(url, headers=HEADERS)
+    return r.json()["graphql"]["user"]["profile_pic_url_hd"]
+
+    @app.route("/draw", methods=["POST"])
 def draw():
     reel_url = request.json["url"]
     shortcode = reel_url.split("/reel/")[1].split("/")[0]
@@ -74,12 +79,20 @@ def draw():
         if ok:
             valid_users.append(user)
 
-    winners = random.sample(valid_users, 2)
+    selected = random.sample(valid_users, 4)
+
+    winners = []
+    for u in selected:
+        winners.append({
+            "username": u,
+            "photo": get_profile_pic(u)
+        })
 
     return jsonify({
         "total_comments": len(commenters),
         "valid_users": len(valid_users),
-        "winners": winners
+        "main_winners": winners[:2],
+        "backup_winners": winners[2:]
     })
 
 if __name__ == "__main__":
